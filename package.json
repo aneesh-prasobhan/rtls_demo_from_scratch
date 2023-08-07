@@ -16,9 +16,10 @@
     "maath": "^0.7.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-parallax-tilt": "^1.7.156",
+    "react-parallax-tilt": "^1.7.157",
     "react-router-dom": "^6.14.2",
-    "react-vertical-timeline-component": "^3.6.0"
+    "react-vertical-timeline-component": "^3.6.0",
+    "three": "^0.155.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",
