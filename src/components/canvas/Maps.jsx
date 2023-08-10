@@ -4,6 +4,7 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Preload, useGLTF } from '@react-three/drei';
 
 import CanvasLoader from '../Loader';
+import { Text } from '@react-three/drei';
 
 
 
@@ -11,6 +12,17 @@ const Maps = () => {
   // const map = useGLTF('./HSW.gltf')
   const map = useGLTF('./HSW.gltf')
   
+  // State for zones
+  const [zones, setZones] = useState([]);
+
+  const ZONE_COORDINATES = {
+    Z1: [3, 4, -26],  
+    Z2: [10, 4, -31.1],  
+    Z3: [10, 4, -21],  
+    Z4: [10, 4, -13],      
+    Z5: [3, 4, -8]   // Replace with the actual coordinates for Z5
+  };
+
   useEffect(() => {
     map.scene.traverse((child) => {
         if (child.isMesh) {
@@ -18,11 +30,33 @@ const Maps = () => {
             child.receiveShadow = true;
         }
     });
+
+
+
+    fetch('http://localhost:3000/zones')
+      .then(response => response.json())
+      .then(data => {
+
+        const mappedData = data.map(zone => ({
+          ...zone,
+          position: ZONE_COORDINATES[zone.name]
+        }));
+        setZones(mappedData);
+      });
+
 }, [map]);
 
   return (
     // when creating threejs elements, dont start with div, but start with Mesh
     <mesh>
+      {/* Displaying zone numbers */}
+      {zones.map(zone => (
+        <Text position={zone.position} fontSize={5} key={zone.name} rotation={[Math.PI / -2, -1.5, -1.55]}>
+          {zone.count}
+        </Text>
+      ))}
+
+
       {/* Inside mesh, create light at a height*/}
       {/* <ambientLight intensity={1} /> */}
       <hemisphereLight intensity={0.8} groundColor="black" />

@@ -1,0 +1,9 @@
+{
+  "zones": [
+    { "name": "Z1", "count": 5 },
+    { "name": "Z2", "count": 10 },
+	{ "name": "Z3", "count": 0 },
+    { "name": "Z4", "count": 8 },
+    { "name": "Z5", "count": 7 }
+  ]
+}
