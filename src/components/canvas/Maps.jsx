@@ -33,7 +33,7 @@ const Maps = () => {
 
 
     const fetchZones = () => {
-      fetch('https://run.mocky.io/v3/954d0232-c6aa-4595-95af-af3ac8f90814')
+      fetch('http://localhost:3000/zones')
         .then(response => {
           if (!response.ok) {
             throw new Error('Network response was not ok');
@@ -53,7 +53,7 @@ const Maps = () => {
   };
 
       fetchZones(); // fetch immediately on mount
-      const interval = setInterval(fetchZones, 1000); // fetch every 1 seconds
+      const interval = setInterval(fetchZones, 2000); // fetch every 1 seconds
   
       return () => clearInterval(interval); // clear the interval when the component unmounts
 }, [map]);
