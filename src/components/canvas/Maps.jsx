@@ -32,18 +32,30 @@ const Maps = () => {
     });
 
 
+    const fetchZones = () => {
+      fetch('https://run.mocky.io/v3/954d0232-c6aa-4595-95af-af3ac8f90814')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
+        .then(data => {
+          const mappedData = data.zones.map(zone => ({
+            ...zone,
+            position: ZONE_COORDINATES[zone.name]
+          }));
+          setZones(mappedData);
+        })
+        .catch(error => {
+          console.error('There was a problem with the fetch operation:', error.message);
+        });
+  };
 
-    fetch('http://localhost:3000/zones')
-      .then(response => response.json())
-      .then(data => {
-
-        const mappedData = data.map(zone => ({
-          ...zone,
-          position: ZONE_COORDINATES[zone.name]
-        }));
-        setZones(mappedData);
-      });
-
+      fetchZones(); // fetch immediately on mount
+      const interval = setInterval(fetchZones, 1000); // fetch every 1 seconds
+  
+      return () => clearInterval(interval); // clear the interval when the component unmounts
 }, [map]);
 
   return (
