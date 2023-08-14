@@ -19,13 +19,13 @@ app.post('/data', (req, res) => {
     const hubId = hubData.id;
 
     const calculateAverageForHubAndBeacon = (hubId, macAddress, callback) => {
-        const thirtySecondsAgo = Date.now() - 5000; // 30 seconds in the past
+        const thirtySecondsAgo = Date.now() - 61000; // X seconds in the past
         db.all("SELECT rssi FROM beacon_history WHERE macAddress = ? AND hubId = ? AND timestamp > ?", [macAddress, hubId, thirtySecondsAgo], (err, rows) => {
             if (err) {
                 return callback(err);
             }
 
-            const totalPossibleReadings = 14;
+            const totalPossibleReadings = 20;
             let sum = 0;
 
             rows.forEach(row => {
@@ -33,7 +33,7 @@ app.post('/data', (req, res) => {
             });
 
             const missingReadings = totalPossibleReadings - rows.length;
-            sum += missingReadings * (-1000); // Use -500 for missing readings
+            sum += missingReadings * (-100); // Use Y for missing readings
 
             const average = sum / totalPossibleReadings;
 
