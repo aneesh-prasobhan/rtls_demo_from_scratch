@@ -17,10 +17,10 @@ const Maps = () => {
 
   const ZONE_COORDINATES = {
     Z1: [3, 4, -26],  
-    Z2: [10, 4, -31.1],  
-    Z3: [10, 4, -21],  
-    Z4: [10, 4, -13],      
-    Z5: [3, 4, -8]   // Replace with the actual coordinates for Z5
+    Z2: [10, 4, -30],  
+    Z3: [10, 4, -20],  
+    Z4: [10, 4, -12],      
+    Z5: [3, 4, -13]   // Replace with the actual coordinates for Z5
   };
 
   useEffect(() => {

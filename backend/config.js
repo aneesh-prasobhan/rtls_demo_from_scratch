@@ -1,5 +1,9 @@
 const HUB_TO_ZONE = {
     'hub869B3FE0': 'Z1',
+    'hub869CB028': 'Z2',
+    'hub55A9DF84': 'Z3',
+    'hub55AA7FC4': 'Z4',
+    'hub55AA60B8': 'Z5',
     // ... add other hub to zone mappings here
   };
   

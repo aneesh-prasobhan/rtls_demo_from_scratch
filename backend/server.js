@@ -18,59 +18,99 @@ app.post('/data', (req, res) => {
     const hubData = req.body;
     const hubId = hubData.id;
 
-    if (HUB_TO_ZONE[hubId]) {
-        // Step 1: Set RSSI of all beacons associated with this hub to -999
-        db.run("UPDATE beacons SET rssi = -999 WHERE hubId = ?", [hubId], err => {
+    const calculateAverageForHubAndBeacon = (hubId, macAddress, callback) => {
+        const thirtySecondsAgo = Date.now() - 5000; // 30 seconds in the past
+        db.all("SELECT rssi FROM beacon_history WHERE macAddress = ? AND hubId = ? AND timestamp > ?", [macAddress, hubId, thirtySecondsAgo], (err, rows) => {
             if (err) {
-                return console.error("Error updating RSSI values:", err.message);
+                return callback(err);
             }
 
-            // Now process the incoming beacon data
-            hubData.items.forEach(item => {
-                if (MAIN_BLE_BEACONS.includes(item.macAddress)) {
-                    const currentRssi = item.rssi[0].rssi;
+            const totalPossibleReadings = 14;
+            let sum = 0;
 
-                    // Step 2: Update the RSSI of the beacon regardless of its value
-                    db.run("REPLACE INTO beacons (macAddress, rssi, hubId) VALUES (?, ?, ?)", [item.macAddress, currentRssi, hubId]);
-                }
+            rows.forEach(row => {
+                sum += row.rssi;
             });
 
-            // Step 3: Delete beacons with RSSI of -999 for this hub
-            db.run("DELETE FROM beacons WHERE hubId = ? AND rssi = -999", [hubId], err => {
-                if (err) {
-                    console.error("Error deleting beacons:", err.message);
-                }
-            });
+            const missingReadings = totalPossibleReadings - rows.length;
+            sum += missingReadings * (-1000); // Use -500 for missing readings
 
-            db.run("REPLACE INTO hubs (id, zone) VALUES (?, ?)", [hubId, HUB_TO_ZONE[hubId]]);
+            const average = sum / totalPossibleReadings;
+
+            callback(null, average);
         });
+    };
+    if (HUB_TO_ZONE[hubId]) {
+        hubData.items.forEach(item => {
+            if (MAIN_BLE_BEACONS.includes(item.macAddress)) {
+                const currentRssi = item.rssi[0].rssi;
+                const currentTime = Date.now();
+
+                // Insert into beacon_history
+                db.run("INSERT INTO beacon_history (macAddress, rssi, hubId, timestamp) VALUES (?, ?, ?, ?)", [item.macAddress, currentRssi, hubId, currentTime], (err) => {
+                    if (err) {
+                        return console.error("Error inserting into beacon_history:", err.message);
+                    }
+
+                    // Calculate moving average for current hub and compare with best hub
+                    calculateAverageForHubAndBeacon(hubId, item.macAddress, (err, currentHubAverage) => {
+                        db.get("SELECT bestHubId FROM beacons WHERE macAddress = ?", [item.macAddress], (err, row) => {
+                            let bestHubId = row ? row.bestHubId : null;
+
+                            if (bestHubId) {
+                                calculateAverageForHubAndBeacon(bestHubId, item.macAddress, (err, bestHubAverage) => {
+                                    if (currentHubAverage > bestHubAverage) {
+                                        db.run("UPDATE beacons SET bestHubId = ? WHERE macAddress = ?", [hubId, item.macAddress]);
+                                    }
+                                });
+                            } else {
+                                db.run("REPLACE INTO beacons (macAddress, bestHubId, lastUpdatedTimestamp) VALUES (?, ?, ?)", [item.macAddress, hubId, currentTime]);
+                            }
+                        });
+                    });
+                });
+            }
+        });
+
+        db.run("REPLACE INTO hubs (id, zone) VALUES (?, ?)", [hubId, HUB_TO_ZONE[hubId]]);
     }
 
     res.send({ status: 'OK' });
 });
 
-  
-
 
 // Endpoint to serve zone data
 app.get('/zones', (req, res) => {
-  const zones = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5'];
-  let responseData = [];
+    const zones = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5'];
 
-  zones.forEach((zone, index) => {
-      db.all("SELECT COUNT(macAddress) as count FROM beacons WHERE hubId IN (SELECT id FROM hubs WHERE zone = ?)", [zone], (err, rows) => {
-          if (rows && rows.length > 0) {
-              responseData.push({ name: zone, count: rows[0].count });
-          } else {
-              responseData.push({ name: zone, count: 0 });
-          }
+    // Helper function to get the beacon count for a zone
+    const getCountForZone = (zone) => {
+        return new Promise((resolve, reject) => {
+            // Fetch the count based on bestHubId for each zone
+            db.get("SELECT COUNT(macAddress) as count FROM beacons WHERE bestHubId IN (SELECT id FROM hubs WHERE zone = ?)", [zone], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({
+                        name: zone,
+                        count: row ? row.count : 0
+                    });
+                }
+            });
+        });
+    };
 
-          if (index === zones.length - 1) {
-              res.json({ zones: responseData });
-          }
-      });
-  });
+    // Use Promise.all to wait for all database calls to complete
+    Promise.all(zones.map(zone => getCountForZone(zone)))
+        .then(results => {
+            res.json({ zones: results });
+        })
+        .catch(error => {
+            console.error('Error fetching zone data:', error);
+            res.status(500).send({ error: 'Internal server error' });
+        });
 });
+
 
 
 app.listen(PORT, () => {
